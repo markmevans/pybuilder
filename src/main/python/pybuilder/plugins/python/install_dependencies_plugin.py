@@ -38,7 +38,7 @@ def execute_pip_command(pip_command_line, log_file):
             pip.main(pip_command_line.split())
             write_file(log_file, 'STDOUT\n', streams.stdout, 'STDERR\n', streams.stderr, '\n')
         except Exception as e:
-            write_file(log_file, 'ERROR\n', e.message, '\n')
+            write_file(log_file, 'ERROR\n', str(e), '\n')
             return 1
     return 0
 
