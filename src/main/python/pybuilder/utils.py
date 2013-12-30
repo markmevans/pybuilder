@@ -211,7 +211,11 @@ def mkdir(directory):
 class CapturedStreams(object):
     def __init__(self):
         self._stdout = StringIO()
+        self._stdout.buffer = lambda: None
+        self._stdout.buffer.write = lambda bytes: self._stdout.write(bytes.decode('ascii', 'replace'))
         self._stderr = StringIO()
+        self._stderr.buffer = lambda: None
+        self._stderr.buffer.write = lambda bytes: self._stderr.write(bytes.decode('ascii', 'replace'))
 
     def __enter__(self):
         self.old_stdout, self.old_stderr = sys.stdout, sys.stderr
