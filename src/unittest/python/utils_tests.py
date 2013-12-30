@@ -21,12 +21,14 @@ import tempfile
 import time
 import unittest
 import shutil
+import sys
 
 from json import loads
 from mockito import when, verify, unstub, any
 
 import pybuilder.utils
 from pybuilder.utils import (GlobExpression,
+                             CapturedStreams,
                              Timer,
                              apply_on_files,
                              as_list,
@@ -314,3 +316,16 @@ class MkdirTest(unittest.TestCase):
 
         self.assertTrue(os.path.exists(self.any_directory))
         self.assertFalse(os.path.isdir(self.any_directory))
+
+
+class CapturedStreamsTests(unittest.TestCase):
+
+    def test_should_capture_stdout(self):
+        with CapturedStreams() as streams:
+            sys.stdout.write('hello')
+            self.assertEqual(streams.stdout, 'hello')
+
+    def test_should_capture_stderr(self):
+        with CapturedStreams() as streams:
+            sys.stderr.write('hello')
+            self.assertEqual(streams.stderr, 'hello')

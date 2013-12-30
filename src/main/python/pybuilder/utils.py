@@ -18,8 +18,13 @@ import json
 import os
 import re
 import subprocess
+import sys
 import tempfile
 import time
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 from pybuilder.errors import MissingPrerequisiteException, PythonbuilderException
 
@@ -201,3 +206,28 @@ def mkdir(directory):
             raise PythonbuilderException(message, directory)
         return
     os.makedirs(directory)
+
+
+class CapturedStreams(object):
+    def __init__(self):
+        self._stdout = StringIO()
+        self._stderr = StringIO()
+
+    def __enter__(self):
+        self.old_stdout, self.old_stderr = sys.stdout, sys.stderr
+        self.old_stdout.flush()
+        self.old_stderr.flush()
+        sys.stdout, sys.stderr = self._stdout, self._stderr
+        return self
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        sys.stdout = self.old_stdout
+        sys.stderr = self.old_stderr
+
+    @property
+    def stdout(self):
+        return self._stdout.getvalue()
+
+    @property
+    def stderr(self):
+        return self._stderr.getvalue()

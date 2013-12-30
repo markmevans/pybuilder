@@ -18,12 +18,29 @@ from __future__ import print_function
 
 __author__ = "Alexander Metzner"
 
+try:
+    import pip
+except:
+    pip = None
+
 from pybuilder.core import before, after, task, description, use_plugin, init
-from pybuilder.errors import BuildFailedException
-from pybuilder.utils import assert_can_execute, execute_command, mkdir
+from pybuilder.errors import BuildFailedException, MissingPrerequisiteException
+from pybuilder.utils import mkdir, CapturedStreams, write_file
 from pybuilder.plugins.python.setuptools_plugin_helper import build_dependency_version_string
 from pybuilder.terminal import print_file_content
+
 use_plugin("core")
+
+
+def execute_pip_command(pip_command_line, log_file):
+    with CapturedStreams() as streams:
+        try:
+            pip.main(pip_command_line.split())
+            write_file(log_file, 'STDOUT\n', streams.stdout, 'STDERR\n', streams.stderr, '\n')
+        except Exception as e:
+            write_file(log_file, 'ERROR\n', e.message, '\n')
+            return 1
+    return 0
 
 
 @init
@@ -38,7 +55,11 @@ def initialized_install_dependencies_plugin(project):
 @after("prepare")
 def check_pip_available(logger):
     logger.debug("Checking if pip is available")
-    assert_can_execute("pip", "pip", "plugin python.install_dependencies")
+    try:
+        import pip
+        logger.debug("Found pip in version %r" % pip.__version__)
+    except ImportError:
+        raise MissingPrerequisiteException("pip", "plugin python.install_dependencies")
 
 
 @task
@@ -83,8 +104,8 @@ def install_dependency(logger, project, dependency):
     logger.info("Installing dependency '%s'%s", dependency.name, " from %s" % dependency.url if dependency.url else "")
     log_file = project.expand_path("$dir_install_logs", dependency.name)
 
-    pip_command_line = "pip install {0}{1}".format(build_pip_install_options(project), as_pip_argument(dependency))
-    exit_code = execute_command(pip_command_line, log_file, shell=True)
+    pip_command_line = "install {0}{1}".format(build_pip_install_options(project), as_pip_argument(dependency))
+    exit_code = execute_pip_command(pip_command_line, log_file)
     if exit_code != 0:
         if project.get_property("verbose"):
             print_file_content(log_file)
